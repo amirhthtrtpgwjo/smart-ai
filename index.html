@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>💎 سکه هوشمند AI - نسخه نهایی</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vazirmatn@33.0.3/Vazirmatn-font-face.css">
+  <style>
+    :root {
+      --primary: #00ffcc;
+      --secondary: #ff6f61;
+      --accent: #ffd700;
+      --bg-ice-blue: linear-gradient(135deg, #1e3c72, #2a5298, #a1c4fd);
+      --text-dark: white;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Vazirmatn', Arial, sans-serif;
+    }
+    body {
+      background: var(--bg-ice-blue);
+      color: var(--text-dark);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      padding: 20px;
+    }
+    .game-container {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 450px;
+      text-align: center;
+    }
+    .header h1 {
+      font-size: 2rem;
+      color: var(--accent);
+    }
+    .stats {
+      margin: 1rem 0;
+    }
+    .stat-item {
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 12px;
+      margin-bottom: 10px;
+    }
+    .coin {
+      width: 120px;
+      height: 120px;
+      background: gold;
+      border-radius: 50%;
+      margin: 1rem auto;
+      cursor: pointer;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    .btn {
+      background: var(--secondary);
+      color: white;
+      border: none;
+      padding: 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.9);
+      padding: 2rem;
+      border-radius: 16px;
+      text-align: center;
+      max-width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    .modal.active {
+      display: block;
+    }
+    .item {
+      background: rgba(255,255,255,0.1);
+      padding: 0.8rem;
+      border-radius: 8px;
+      margin: 0.5rem 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="game-container">
+    <div class="header">
+      <h1>💎 سکه AI</h1>
+      <div class="stats">
+        <div class="stat-item">سکه‌ها: <span id="score">0</span></div>
+        <div class="stat-item">تپ‌های باقی‌مانده: <span id="tap-limit">1000</span></div>
+      </div>
+    </div>
+    <div class="coin" id="coin">AI</div>
+    <button class="btn" id="daily-reward">دریافت سکه روزانه</button>
+    <button class="btn" id="shop-btn">🛒 فروشگاه</button>
+    <button class="btn" id="missions-btn">🎯 ماموریت‌ها</button>
+    <button class="btn" id="settings-btn">⚙️ تنظیمات</button>
+  </div>
+
+  <!-- مدال فروشگاه -->
+  <div class="modal" id="shop-modal">
+    <h2>فروشگاه</h2>
+    <div id="shop-list"></div>
+    <button class="btn" id="close-shop">بستن</button>
+  </div>
+
+  <!-- مدال ماموریت‌ها -->
+  <div class="modal" id="missions-modal">
+    <h2>ماموریت‌ها</h2>
+    <div id="missions-list"></div>
+    <button class="btn" id="close-missions">بستن</button>
+  </div>
+
+  <!-- مدال تنظیمات -->
+  <div class="modal" id="settings-modal">
+    <h2>تنظیمات</h2>
+    <button class="btn" id="change-sound">تغییر صدای کلیک</button>
+    <button class="btn" id="close-settings">بستن</button>
+  </div>
+
+  <audio id="tap-sound" src="https://www.soundjay.com/button/beep-07.wav" preload="auto"></audio>
+
+  <script>
+    // بازیابی امتیاز و تپ‌های باقی‌مانده از localStorage
+    let score = parseInt(localStorage.getItem("score")) || 0;
+    let tapLimit = parseInt(localStorage.getItem("tapLimit")) || 1000;
+    let lastDailyClaim = localStorage.getItem("dailyReward") || "";
+    const scoreDisplay = document.getElementById("score");
+    const tapLimitDisplay = document.getElementById("tap-limit");
+    scoreDisplay.textContent = score;
+    tapLimitDisplay.textContent = tapLimit;
+
+    const coin = document.getElementById("coin");
+    const tapSound = document.getElementById("tap-sound");
+
+    // دکمه‌ها و مدال‌ها
+    const dailyRewardBtn = document.getElementById("daily-reward");
+    const shopBtn = document.getElementById("shop-btn");
+    const missionsBtn = document.getElementById("missions-btn");
+    const settingsBtn = document.getElementById("settings-btn");
+    const shopModal = document.getElementById("shop-modal");
+    const missionsModal = document.getElementById("missions-modal");
+    const settingsModal = document.getElementById("settings-modal");
+    const closeShopBtn = document.getElementById("close-shop");
+    const closeMissionsBtn = document.getElementById("close-missions");
+    const closeSettingsBtn = document.getElementById("close-settings");
+    const changeSoundBtn = document.getElementById("change-sound");
+
+    // آرایه آیتم‌های فروشگاه (یکی از آیتم‌ها به عنوان «فلا آیتم فروشگار» سطح 10 مشخص شده)
+    const shopItems = [
+      { name: "ربات اتوکلیکر", cost: 100 },
+      { name: "بوستر تپ", cost: 150 },
+      { name: "افزایش محدودیت خرید", cost: 200 },
+      { name: "کاهش محدودیت تپ", cost: 250 },
+      { name: "فلا آیتم فروشگار (سطح 10)", cost: 500 }
+    ];
+
+    // آرایه ماموریت‌ها (25 ماموریت با اهداف و جوایز متفاوت)
+    const missions = [];
+    for (let i = 1; i <= 25; i++) {
+      missions.push({ title: `ماموریت ${i}: تپ کن ${i * 50} بار`, goal: i * 50, reward: i * 20 });
+    }
+
+    // رویداد کلیک روی سکه
+    coin.addEventListener("click", () => {
+      if (tapLimit > 0) {
+        tapSound.currentTime = 0;
+        tapSound.play();
+        score++;
+        tapLimit--;
+        scoreDisplay.textContent = score;
+        tapLimitDisplay.textContent = tapLimit;
+        // ذخیره در localStorage
+        localStorage.setItem("score", score);
+        localStorage.setItem("tapLimit", tapLimit);
+      }
+    });
+
+    // دکمه سکه روزانه
+    dailyRewardBtn.addEventListener("click", () => {
+      let today = new Date().toDateString();
+      if (lastDailyClaim !== today) {
+        score += 50;
+        scoreDisplay.textContent = score;
+        lastDailyClaim = today;
+        localStorage.setItem("dailyReward", today);
+        localStorage.setItem("score", score);
+      } else {
+        alert("شما قبلاً سکه روزانه دریافت کرده‌اید!");
+      }
+    });
+
+    // نمایش آیتم‌های فروشگاه
+    function updateShop() {
+      const shopList = document.getElementById("shop-list");
+      shopList.innerHTML = "";
+      shopItems.forEach(item => {
+        const div = document.createElement("div");
+        div.classList.add("item");
+        div.innerHTML = `<span>${item.name} - ${item.cost} سکه</span>
+                         <button class="btn" onclick="buyItem('${item.name}', ${item.cost})">خرید</button>`;
+        shopList.appendChild(div);
+      });
+    }
+
+    // تابع خرید آیتم فروشگاه
+    function buyItem(name, cost) {
+      if (score >= cost) {
+        score -= cost;
+        scoreDisplay.textContent = score;
+        localStorage.setItem("score", score);
+        alert(`آیتم ${name} خریداری شد!`);
+      } else {
+        alert("سکه کافی نیست!");
+      }
+    }
+
+    // نمایش ماموریت‌ها
+    function updateMissions() {
+      const missionsList = document.getElementById("missions-list");
+      missionsList.innerHTML = "";
+      missions.forEach(mission => {
+        const div = document.createElement("div");
+        div.classList.add("item");
+        div.innerHTML = `<span>${mission.title} (هدف: ${mission.goal} تپ - جایزه: ${mission.reward} سکه)</span>
+                         <button class="btn" onclick="claimMissionReward('${mission.title}', ${mission.goal}, ${mission.reward})">اعطا جایزه</button>`;
+        missionsList.appendChild(div);
+      });
+    }
+
+    // تابع اعطای جایزه ماموریت (برای مثال؛ در اینجا فقط جایزه اضافه می‌شود، اما منطق تکمیل ماموریت را می‌توانید گسترش دهید)
+    function claimMissionReward(title, goal, reward) {
+      // برای نمونه، فرض کنید کاربر اگر تعداد تپ‌های انجام شده (score) از هدف ماموریت بیشتر باشد، جایزه دریافت کند.
+      if (score >= goal) {
+        score += reward;
+        scoreDisplay.textContent = score;
+        localStorage.setItem("score", score);
+        alert(`جایزه ${reward} سکه برای ${title} اعطا شد!`);
+      } else {
+        alert(`برای دریافت جایزه ${title} باید ${goal} تپ انجام دهید!`);
+      }
+    }
+
+    // مدیریت نمایش/پنهان مدال‌ها
+    function toggleModal(modal) {
+      modal.classList.toggle("active");
+    }
+    shopBtn.addEventListener("click", () => { updateShop(); toggleModal(shopModal); });
+    closeShopBtn.addEventListener("click", () => { toggleModal(shopModal); });
+    missionsBtn.addEventListener("click", () => { updateMissions(); toggleModal(missionsModal); });
+    closeMissionsBtn.addEventListener("click", () => { toggleModal(missionsModal); });
+    settingsBtn.addEventListener("click", () => { toggleModal(settingsModal); });
+    closeSettingsBtn.addEventListener("click", () => { toggleModal(settingsModal); });
+
+    // تغییر صدای کلیک (تنظیمات)
+    changeSoundBtn.addEventListener("click", () => {
+      const sounds = [
+        "https://www.soundjay.com/button/beep-07.wav",
+        "https://www.soundjay.com/button/beep-09.wav",
+        "https://www.soundjay.com/button/button-3.wav"
+      ];
+      let current = tapSound.src;
+      let currentIndex = sounds.indexOf(current);
+      if (currentIndex === -1) currentIndex = 0;
+      tapSound.src = sounds[(currentIndex + 1) % sounds.length];
+      alert("صدای کلیک تغییر کرد!");
+    });
+  </script>
+</body>
+</html>
